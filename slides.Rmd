@@ -1,7 +1,6 @@
 ---
-title: "Sparse Modeling & Lasso"
-subtitle: "Lecture 6 - MATH11301" 
-author: "Josh Fogg"
+title: "Sparse Regression Models"
+subtitle: "Lecture 6 - MATH11301"
 
 output:
   xaringan::moon_reader:
@@ -13,7 +12,7 @@ output:
       countIncrementalSlides: false
 ---
 
-<!-- Blocks that do setup for the rest of the document-->
+<!-- Blocks that do set-up for the rest of the document-->
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
 library(tidyverse)
@@ -22,6 +21,9 @@ library(ggpubr)
 library(openintro)
 library(broom)
 library(tippy)
+library(glmnet)
+library(Matrix)
+library(gridExtra)
 ```
 
 ```{css, echo=FALSE}
@@ -101,7 +103,7 @@ $$
 again, fit using least squares procedure:
 
 \begin{equation}
-  \min_{\beta_0, \beta_1, \ldots, \beta_p} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{i=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 \right) =: \min_{{\bf\beta}}(\operatorname{RSS}).
+  \min_{\beta_0, \beta_1, \ldots, \beta_p} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 \right) =: \min_{{\bf\beta}}(\operatorname{RSS}).
 \end{equation}
 
 ---
@@ -221,7 +223,7 @@ Both beat exhaustion, going from checking $2^p$ models ([NP-complete](https://en
 In practice, we often take combined approach: removing obsolete variables from the model whenever a new one is added.
 
 ```r
-empty_model <- lm(interest_rate~., data=loans_ids)
+full_model <- lm(full_rate~., data=loans_ids)
 hybrid <- step(empty_model, direction='both')
 ```
 
@@ -238,29 +240,118 @@ class: inverse, middle, center
 
 ---
 
-## The Lasso
+## Constrained Coefficients
 
-Subset selection aren't the only way to tune a model. Here's a more _optimum_ approach.
+Subset selection isn't the only way improve models. Here's a more _optimum_ approach.
 
-More text should follow here. 
+--
+
+Starting with the least squares problem, $\min_{{\bf\beta}}(\operatorname{RSS})$, we add an additional constraint
+
+\begin{equation}
+  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 \right)~\text{subject to}~\|\beta\|\leq s.
+\end{equation}
+
+on our vector of coefficients. Here $t$ is a parameter to be tuned.
+
+
+--
+
+By rewriting this in **Lagrange form**, we can work with the equivalent problem
+
+\begin{equation}
+  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 + \lambda\|\beta\| \right).
+\end{equation}
+
+where $\lambda\geq0$ is now the tuning parameter.
 
 ---
 
-### Tuning
+### The Ridge
 
-Something about parameter tuning.
+In **Ridge regression**, we apply the $\mathcal{l}_1$ norm, solving $\min_{\beta} (RSS + \lambda\sum_{i=1}^p\beta_j^2 )$.
+
+```{r load-data-nona, echo=FALSE}
+loans_ids <- na.omit(loans_ids)
+```
+
+```{r ridge-regression, echo=TRUE, class.output="scroll-300", warning = FALSE, message = FALSE}
+# glmnet requires matrix input, not formula
+X <- as.matrix(loans_ids[, -1])  # first column is interest_rate
+y <- as.matrix(loans_ids[, 1])
+model = glmnet(X, y, alpha = 0)  # use L1 norm
+```
+
+```{r ridge-coefficient-plot, echo=FALSE, fig.align='center', fig.height=4, fig.width=6, dev='svg'}
+plot(model, label = TRUE, xvar = "lambda")
+```
+
+Note that $\beta_i>0$ for all $i$ and $\lambda$ here.
 
 ---
 
-## The Ridge
+### The Lasso
 
-Hello, world!
+With **Lasso regression** we apply the $\mathcal{l}_2$ norm, solving $\min_{\beta} (RSS + \lambda\sum_{i=1}^p|\beta_j^{\phantom{'}}| )$.
+
+```{r lasso-regression, echo=TRUE, class.output="scroll-300", warning = FALSE, message = FALSE}
+# glmnet requires matrix input, not formula
+X <- as.matrix(loans_ids[, -1])  # first column is interest_rate
+y <- as.matrix(loans_ids[, 1])
+model = glmnet(X, y, alpha = 1)  # use L2 norm
+```
+
+```{r lasso-coefficient-plot, echo=FALSE, fig.align='center', fig.height=4, fig.width=6, dev='svg'}
+plot(model, label = TRUE, xvar = "lambda")
+```
+
+Note that $\beta_i=0$ for some $i$ and $\lambda$ here.
+
+---
+class: inverse, middle, center
+
+## What's the key difference here?
+
+$$
+  l_1~\text{vs.}~l_2
+$$
+
+---
+
+### Constraint Comparison
+
+```{r fig67, echo=FALSE, out.width="80%", fig.show="hold",  fig.align="center", fig.alt="Hello, world!", fig.cap="Contour plot of the error and constraint functions for the lasso and ridge respectively."}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/5/58/Regularization.jpg")
+```
+
+
+---
+
+### Larger Dataset
+
+Unlike Ridge, Lasso performs variable selection. This creates **sparse models**.
+
+```{r, results='hide'}
+n <- 100
+X <- matrix(rnorm(n*20), n, 20)  # n-by-20 matrix of rnorms
+y <- rnorm(n)
+ridge_model <- glmnet(X, y, alpha=0)  # L1 norm
+lasso_model <- glmnet(X, y, alpha=1)  # L2 norm
+```
+
+```{r, echo=FALSE, fig.height=4.5, fig.width=5.2, dev='svg'}
+plot1 <- plot(ridge_model, xvar="lambda", main="Ridge Coefficients\n")
+plot2 <- plot(lasso_model, xvar="lambda", main="Lasso Coefficients\n")
+grid.arrange(plot1, plot2, ncol=2)
+```
 
 ---
 
 ## Least Angle Regression
 
-Hello, world!
+```{r}
+summary(mtcars)  # for a slide we should never get to
+```
 
 ---
 class: inverse, middle, center
@@ -271,7 +362,9 @@ class: inverse, middle, center
 
 ## Placeholder
 
-Hello, world!
+```{r}
+summary(mtcars)  # for a slide we should never get to
+```
 
 ---
 class: inverse, middle, center
