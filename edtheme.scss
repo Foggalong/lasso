@@ -4,8 +4,12 @@
   Released by Josh Fogg under a Creative Commons Zero (CC0) license.
 */
 
+/*-- scss:defaults --*/
+
 /* UoE's sans-serif brand font */
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap');
+
+
 body, h1, h2, h3 { font-family: "Source Sans 3", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
