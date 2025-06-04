@@ -7,26 +7,24 @@ output:
     lib_dir: libs
     css: ["default", "edtheme.scss"]
     nature:
-      # highlightStyle: github
       highlightLines: true
       countIncrementalSlides: false
+      # ratio: "16:9"  # too late now
 ---
 
-<!-- Blocks that do set-up for the rest of the document-->
-```{r setup, include=FALSE}
+```{r r-setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
-library(tidyverse)
-library(kableExtra)
-library(ggpubr)
-library(openintro)
-library(broom)
-library(tippy)
-library(glmnet)
-library(Matrix)
-library(gridExtra)
+library(tidyverse)   # kitchen sink
+library(kableExtra)  # table formatting
+library(ggpubr)      # annotations like stat_regline_equation
+library(openintro)   # credit dataset from IDS
+library(broom)       # keep it tidy()
+library(glmnet)      # Ridge & Lasso implementations
+library(Matrix)      # glmnet dependency, input type
+library(gridExtra)   # easy image grids 
 ```
 
-```{css, echo=FALSE}
+```{css scrolling-output, echo=FALSE}
 .scroll-300 {
   /* enable scrolling output for large code blocks */
   max-height: 300px;
@@ -58,8 +56,7 @@ class: inverse, middle, center
 
 Given response $y$ and **single** predictor $x$, this model fits to $y = \beta_{0} + \beta_{1}x$.
 
-```{r scatter-plot, echo=FALSE, fig.align='center', fig.height=4, fig.width=8, dev='svg'}
-# plot features that will be common for both
+```{r scatter-plot, echo=FALSE, fig.align='center', fig.height=4, fig.width=8, dev='svg', fig.alt="Scatter diagram for the classic 'mtcars' dataset, showing miles per gallon against horsepower. A linear regression of y = 30 - 0.068x is shown."}
 scatter_example <- ggplot(mtcars, aes(x = hp, y = mpg)) +
   theme_minimal() +
   labs(
@@ -68,7 +65,7 @@ scatter_example <- ggplot(mtcars, aes(x = hp, y = mpg)) +
     x = "horsepower, x",
     y = "miles per gallon, y",
   ) +
-  ylim(0,35)
+  ylim(0, 35)
 
 # for first example, all point the same
 scatter_example +
@@ -117,7 +114,15 @@ $$
 
 ---
 
-```{r prepare-data, echo=FALSE}
+## Example Linear Model
+
+In <abbr title="Introduction to Data Science, one of the first year maths courses here in Edinburgh.">IDS</abbr>, we fit a linear model to the [Lending Club's `loans` dataset](https://openintrostat.github.io/openintro/reference/loans_full_schema.html).
+
+```{r ids-data-prep, echo=FALSE}
+# IDS uses 'Introduction to Modern Statistics' textbook. It doesn't actually
+# work with the full, raw Lending Club data; using the code below it first
+# consolidates some variables, fixes some types, and then selects a subset.
+
 loans_ids <- loans_full_schema |>
   mutate(
     credit_util = total_credit_utilized / total_credit_limit,
@@ -125,25 +130,24 @@ loans_ids <- loans_full_schema |>
     income_ = droplevels(verified_income)
   ) |>
   rename(
-    credit_checks = inquiries_last_12m,
-    in_employment = emp_length 
-  ) |> select(
-  interest_rate,
-  income_,
-  debt_to_income,
-  credit_util,
-  bankruptcy,
-  term,
-  credit_checks,
-  issue_month
-)
+    credit_checks = inquiries_last_12m
+  ) |>
+  select(
+    interest_rate,
+    income_,
+    debt_to_income,
+    credit_util,
+    bankruptcy,
+    term,
+    credit_checks,
+    issue_month
+  )
 ```
 
-## Example Linear Model
+```{r ims-analyse, echo=FALSE}
+# This code for MLR is also from Intro to Modern Stats, just with a few
+# minor formatting corrections.
 
-In <abbr title="Introduction to Data Science, one of the first year maths courses here in Edinburgh.">IDS</abbr>, we fit a linear model to the [Lending Club's `loans` dataset](https://openintrostat.github.io/openintro/reference/loans_full_schema.html).
-
-```{r analyse_ids, echo=FALSE}
 model_ids <- lm(interest_rate~., data=loans_ids)
 
 model_ids |>
@@ -193,7 +197,7 @@ where $\operatorname{TSS} = \sum_i {(y_i-\bar{y})}^2$ and $d$ is the number of v
 
 Starting with full model, successively remove predictors until the criterion can't improve.
 
-```{r backwards, echo=TRUE, class.output="scroll-300"}
+```{r step-backwards, echo=TRUE, class.output="scroll-300"}
 full_model <- lm(interest_rate~., data=loans_ids)
 backward <- step(full_model, direction='backward')
 ```
@@ -204,10 +208,11 @@ backward <- step(full_model, direction='backward')
 
 Starting with the empty model, successively add predictors until criterion can't improve.
 
-```{r forwards, echo=TRUE, class.output="scroll-300"}
+```{r step-forwards, echo=TRUE, class.output="scroll-300"}
 empty_model <- lm(interest_rate~1, data=na.omit(loans_ids))
 forward <- step(empty_model, direction='forward', scope = formula(full_model))
 ```
+
 ---
 
 ### Hybrid Approaches
@@ -216,18 +221,20 @@ Backward selection requires that $n > p$ in order to yield a unique least-square
 
 --
 
-Both beat exhaustion, going from checking $2^p$ models ([NP-complete](https://en.wikipedia.org/wiki/NP-completeness)) to $1+\frac{p(p+1)}{2}$ ([P](https://en.wikipedia.org/wiki/P_(complexity)), but neither are guaranteed to find the optimal $d$-predictor model.
+<!-- Both beat exhaustion, going from checking $2^p$ models ([NP-complete](https://en.wikipedia.org/wiki/NP-completeness)) to $1+\frac{p(p+1)}{2}$ ([P](https://en.wikipedia.org/wiki/P_(complexity)), but neither are guaranteed to find the optimal $d$-predictor model. -->
 
---
+<!-- -- -->
 
-In practice, we often take combined approach: removing obsolete variables from the model whenever a new one is added.
+In practice, we often take combined approach: starting from the empty model, whenever a new variable is added, remove any now-obsolete variables.
 
-```r
-full_model <- lm(full_rate~., data=loans_ids)
-hybrid <- step(empty_model, direction='both')
+```{r step-both, echo=TRUE, eval=FALSE, class.output="scroll-300"}
+empty_model <- lm(interest_rate~1, data=na.omit(loans_ids))
+both <- step(empty_model, direction='both', scope = formula(full_model))
 ```
 
-The aim is to mimic the 'benefits' of an exhaustive search while retaining the efficiency of subset selection.
+The aim is to mimic the 'benefits' of an exhaustive search while retaining subset selection's efficiency.
+--
+ Importantly though, **they do not guarantee optimality!**
 
 --
 
@@ -240,36 +247,37 @@ class: inverse, middle, center
 
 ---
 
-## Constrained Coefficients
+## Penalty Terms
 
 Subset selection isn't the only way improve models. Here's a more _optimum_ approach.
 
 --
 
-Starting with the least squares problem, $\min_{{\bf\beta}}(\operatorname{RSS})$, we add an additional constraint
+To penalise models whose coefficient vectors have become too 'unruly', we use a penalty
 
 \begin{equation}
-  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 \right)~\text{subject to}~\|\beta\|\leq s.
+  P(\beta) = \lambda \|\beta\|,
 \end{equation}
 
-on our vector of coefficients. Here $t$ is a parameter to be tuned.
-
+where $\|\beta\|$ is a vector-norm and $\lambda\geq0$ is a tuning parameter. 
 
 --
 
-By rewriting this in **Lagrange form**, we can work with the equivalent problem
+Working from the least squares problem, $\min_{{\bf\beta}}(\operatorname{RSS})$, we add this to the objective to give
 
 \begin{equation}
-  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 + \lambda\|\beta\| \right).
+  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 + \lambda\|\beta\| \right),
 \end{equation}
 
-where $\lambda\geq0$ is now the tuning parameter.
+<br><br><br>  <!-- Footnote support seems to be broken -->
+
+_Note: we can show the above is the **Lagrange form** of constraining LS by some ${\|\beta\|} \leq t$._
 
 ---
 
 ### The Ridge
 
-In **Ridge regression**, we apply the $\mathcal{l}_1$ norm, solving $\min_{\beta} (RSS + \lambda\sum_{i=1}^p\beta_j^2 )$.
+In **Ridge regression**, we apply the $\mathcal{l}_2$ norm, solving $\min_{\beta} (RSS + \lambda\sum_{i=1}^p\beta_j^2 )$.
 
 ```{r load-data-nona, echo=FALSE}
 loans_ids <- na.omit(loans_ids)
@@ -279,26 +287,26 @@ loans_ids <- na.omit(loans_ids)
 # glmnet requires matrix input, not formula
 X <- as.matrix(loans_ids[, -1])  # first column is interest_rate
 y <- as.matrix(loans_ids[, 1])
-model = glmnet(X, y, alpha = 0)  # use L1 norm
+model = glmnet(X, y, alpha = 0)  # use L2 norm
 ```
 
 ```{r ridge-coefficient-plot, echo=FALSE, fig.align='center', fig.height=4, fig.width=6, dev='svg'}
 plot(model, label = TRUE, xvar = "lambda")
 ```
 
-Note that $\beta_i>0$ for all $i$ and $\lambda$ here.
+Note that $\beta_i\neq0$ for most $i$ and $\lambda$ here.
 
 ---
 
 ### The Lasso
 
-With **Lasso regression** we apply the $\mathcal{l}_2$ norm, solving $\min_{\beta} (RSS + \lambda\sum_{i=1}^p|\beta_j^{\phantom{'}}| )$.
+With **Lasso regression** we apply the $\mathcal{l}_1$ norm, solving $\min_{\beta} (RSS + \lambda\sum_{i=1}^p|\beta_j^{\phantom{'}}| )$.
 
 ```{r lasso-regression, echo=TRUE, class.output="scroll-300", warning = FALSE, message = FALSE}
 # glmnet requires matrix input, not formula
 X <- as.matrix(loans_ids[, -1])  # first column is interest_rate
 y <- as.matrix(loans_ids[, 1])
-model = glmnet(X, y, alpha = 1)  # use L2 norm
+model = glmnet(X, y, alpha = 1)  # use L1 norm
 ```
 
 ```{r lasso-coefficient-plot, echo=FALSE, fig.align='center', fig.height=4, fig.width=6, dev='svg'}
@@ -335,22 +343,30 @@ Unlike Ridge, Lasso performs variable selection. This creates **sparse models**.
 n <- 100
 X <- matrix(rnorm(n*20), n, 20)  # n-by-20 matrix of rnorms
 y <- rnorm(n)
-ridge_model <- glmnet(X, y, alpha=0)  # L1 norm
-lasso_model <- glmnet(X, y, alpha=1)  # L2 norm
+ridge_model <- glmnet(X, y, alpha=0)  # L2 norm
+lasso_model <- glmnet(X, y, alpha=1)  # L1 norm
 ```
 
 ```{r, echo=FALSE, fig.height=4.5, fig.width=5.2, dev='svg'}
-plot1 <- plot(ridge_model, xvar="lambda", main="Ridge Coefficients\n")
-plot2 <- plot(lasso_model, xvar="lambda", main="Lasso Coefficients\n")
-grid.arrange(plot1, plot2, ncol=2)
+plot0 <- plot(ridge_model, xvar="lambda", main="Ridge Coefficients\n")
+plot1 <- plot(lasso_model, xvar="lambda", main="Lasso Coefficients\n")
+grid.arrange(plot0, plot1, ncol=2)
 ```
 
 ---
 
-## Least Angle Regression
+## Elastic Net
 
-```{r}
-summary(mtcars)  # for a slide we should never get to
+Could instead use a combined penalty term, $P(\alpha,\beta) = \frac{1}{2}(1-\alpha){\|\beta\|}_2^2 + \alpha{\|\beta\|}_1$. 
+
+```{r, echo=FALSE, fig.height=2.8, fig.width=3.4, dev='svg'}
+plot.R <- plot(glmnet(X, y, alpha=0), xvar="lambda", main="Elastic (a = 0)\n")
+plot.2 <- plot(glmnet(X, y, alpha=1e-3), xvar="lambda", main="Elastic (a = 0.001)\n")
+plot.4 <- plot(glmnet(X, y, alpha=1e-2), xvar="lambda", main="Elastic (a = 0.01)\n")
+plot.6 <- plot(glmnet(X, y, alpha=1e-1), xvar="lambda", main="Elastic (a = 0.1)\n")
+plot.8 <- plot(glmnet(X, y, alpha=5e-1), xvar="lambda", main="Elastic (a = 0.5)\n")
+plot.L <- plot(glmnet(X, y, alpha=1e-0), xvar="lambda", main="Elastic (a = 1)\n")
+grid.arrange(plot.R, plot.2, plot.4, plot.6, plot.8, plot.L, ncol=3)
 ```
 
 ---
@@ -363,7 +379,7 @@ class: inverse, middle, center
 ## Placeholder
 
 ```{r}
-summary(mtcars)  # for a slide we should never get to
+summary(mtcars)  # filler for a slide we should never get to
 ```
 
 ---

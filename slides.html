@@ -23,7 +23,6 @@ class: center, middle, inverse, title-slide
 ---
 
 
-&lt;!-- Blocks that do set-up for the rest of the document--&gt;
 
 
 &lt;style type="text/css"&gt;
@@ -56,7 +55,7 @@ class: inverse, middle, center
 
 Given response `\(y\)` and **single** predictor `\(x\)`, this model fits to `\(y = \beta_{0} + \beta_{1}x\)`.
 
-&lt;img src="slides_files/figure-html/scatter-plot-1.svg" style="display: block; margin: auto;" /&gt;
+&lt;img src="slides_files/figure-html/scatter-plot-1.svg" alt="Scatter diagram for the classic 'mtcars' dataset, showing miles per gallon against horsepower. A linear regression of y = 30 - 0.068x is shown." style="display: block; margin: auto;" /&gt;
 
 For `\(n\)` observations `\((x^{(i)}, y^{(i)})\)`, the fit is found by minimizing the residual sum of squares:
 
@@ -98,11 +97,11 @@ $$
 
 ---
 
-
-
 ## Example Linear Model
 
 In &lt;abbr title="Introduction to Data Science, one of the first year maths courses here in Edinburgh."&gt;IDS&lt;/abbr&gt;, we fit a linear model to the [Lending Club's `loans` dataset](https://openintrostat.github.io/openintro/reference/loans_full_schema.html).
+
+
 
 &lt;table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;"&gt;
  &lt;thead&gt;
@@ -343,6 +342,7 @@ forward &lt;- step(empty_model, direction='forward', scope = formula(full_model)
 ## &lt;none&gt;                     184240 29103
 ## + issue_month  2    13.253 184227 29106
 ```
+
 ---
 
 ### Hybrid Approaches
@@ -351,18 +351,21 @@ Backward selection requires that `\(n &gt; p\)` in order to yield a unique least
 
 --
 
-Both beat exhaustion, going from checking `\(2^p\)` models ([NP-complete](https://en.wikipedia.org/wiki/NP-completeness)) to `\(1+\frac{p(p+1)}{2}\)` ([P](https://en.wikipedia.org/wiki/P_(complexity)), but neither are guaranteed to find the optimal `\(d\)`-predictor model.
+&lt;!-- Both beat exhaustion, going from checking `\(2^p\)` models ([NP-complete](https://en.wikipedia.org/wiki/NP-completeness)) to `\(1+\frac{p(p+1)}{2}\)` ([P](https://en.wikipedia.org/wiki/P_(complexity)), but neither are guaranteed to find the optimal `\(d\)`-predictor model. --&gt;
 
---
+&lt;!-- -- --&gt;
 
-In practice, we often take combined approach: removing obsolete variables from the model whenever a new one is added.
+In practice, we often take combined approach: starting from the empty model, whenever a new variable is added, remove any now-obsolete variables.
 
-```r
-full_model &lt;- lm(full_rate~., data=loans_ids)
-hybrid &lt;- step(empty_model, direction='both')
+
+``` r
+empty_model &lt;- lm(interest_rate~1, data=na.omit(loans_ids))
+both &lt;- step(empty_model, direction='both', scope = formula(full_model))
 ```
 
-The aim is to mimic the 'benefits' of an exhaustive search while retaining the efficiency of subset selection.
+The aim is to mimic the 'benefits' of an exhaustive search while retaining subset selection's efficiency.
+--
+ Importantly though, **they do not guarantee optimality!**
 
 --
 
@@ -375,36 +378,37 @@ class: inverse, middle, center
 
 ---
 
-## Constrained Coefficients
+## Penalty Terms
 
 Subset selection isn't the only way improve models. Here's a more _optimum_ approach.
 
 --
 
-Starting with the least squares problem, `\(\min_{{\bf\beta}}(\operatorname{RSS})\)`, we add an additional constraint
+To penalise models whose coefficient vectors have become too 'unruly', we use a penalty
 
 `\begin{equation}
-  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 \right)~\text{subject to}~\|\beta\|\leq s.
+  P(\beta) = \lambda \|\beta\|,
 \end{equation}`
 
-on our vector of coefficients. Here `\(t\)` is a parameter to be tuned.
-
+where `\(\|\beta\|\)` is a vector-norm and `\(\lambda\geq0\)` is a tuning parameter. 
 
 --
 
-By rewriting this in **Lagrange form**, we can work with the equivalent problem
+Working from the least squares problem, `\(\min_{{\bf\beta}}(\operatorname{RSS})\)`, we add this to the objective to give
 
 `\begin{equation}
-  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 + \lambda\|\beta\| \right).
+  \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 + \lambda\|\beta\| \right),
 \end{equation}`
 
-where `\(\lambda\geq0\)` is now the tuning parameter.
+&lt;br&gt;&lt;br&gt;&lt;br&gt;  &lt;!-- Footnote support seems to be broken --&gt;
+
+_Note: we can show the above is the **Lagrange form** of constraining LS by some `\({\|\beta\|} \leq t\)`._
 
 ---
 
 ### The Ridge
 
-In **Ridge regression**, we apply the `\(\mathcal{l}_1\)` norm, solving `\(\min_{\beta} (RSS + \lambda\sum_{i=1}^p\beta_j^2 )\)`.
+In **Ridge regression**, we apply the `\(\mathcal{l}_2\)` norm, solving `\(\min_{\beta} (RSS + \lambda\sum_{i=1}^p\beta_j^2 )\)`.
 
 
 
@@ -413,25 +417,25 @@ In **Ridge regression**, we apply the `\(\mathcal{l}_1\)` norm, solving `\(\min_
 # glmnet requires matrix input, not formula
 X &lt;- as.matrix(loans_ids[, -1])  # first column is interest_rate
 y &lt;- as.matrix(loans_ids[, 1])
-model = glmnet(X, y, alpha = 0)  # use L1 norm
+model = glmnet(X, y, alpha = 0)  # use L2 norm
 ```
 
 &lt;img src="slides_files/figure-html/ridge-coefficient-plot-1.svg" style="display: block; margin: auto;" /&gt;
 
-Note that `\(\beta_i&gt;0\)` for all `\(i\)` and `\(\lambda\)` here.
+Note that `\(\beta_i\neq0\)` for most `\(i\)` and `\(\lambda\)` here.
 
 ---
 
 ### The Lasso
 
-With **Lasso regression** we apply the `\(\mathcal{l}_2\)` norm, solving `\(\min_{\beta} (RSS + \lambda\sum_{i=1}^p|\beta_j^{\phantom{'}}| )\)`.
+With **Lasso regression** we apply the `\(\mathcal{l}_1\)` norm, solving `\(\min_{\beta} (RSS + \lambda\sum_{i=1}^p|\beta_j^{\phantom{'}}| )\)`.
 
 
 ``` r
 # glmnet requires matrix input, not formula
 X &lt;- as.matrix(loans_ids[, -1])  # first column is interest_rate
 y &lt;- as.matrix(loans_ids[, 1])
-model = glmnet(X, y, alpha = 1)  # use L2 norm
+model = glmnet(X, y, alpha = 1)  # use L1 norm
 ```
 
 &lt;img src="slides_files/figure-html/lasso-coefficient-plot-1.svg" style="display: block; margin: auto;" /&gt;
@@ -468,44 +472,19 @@ Unlike Ridge, Lasso performs variable selection. This creates **sparse models**.
 n &lt;- 100
 X &lt;- matrix(rnorm(n*20), n, 20)  # n-by-20 matrix of rnorms
 y &lt;- rnorm(n)
-ridge_model &lt;- glmnet(X, y, alpha=0)  # L1 norm
-lasso_model &lt;- glmnet(X, y, alpha=1)  # L2 norm
+ridge_model &lt;- glmnet(X, y, alpha=0)  # L2 norm
+lasso_model &lt;- glmnet(X, y, alpha=1)  # L1 norm
 ```
 
-![](slides_files/figure-html/unnamed-chunk-3-1.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-2.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-3.svg)&lt;!-- --&gt;
+![](slides_files/figure-html/unnamed-chunk-2-1.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-2-2.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-2-3.svg)&lt;!-- --&gt;
 
 ---
 
-## Least Angle Regression
+## Elastic Net
 
+Could instead use a combined penalty term, `\(P(\alpha,\beta) = \frac{1}{2}(1-\alpha){\|\beta\|}_2^2 + \alpha{\|\beta\|}_1\)`. 
 
-``` r
-summary(mtcars)  # for a slide we should never get to
-```
-
-```
-##       mpg             cyl             disp             hp       
-##  Min.   :10.40   Min.   :4.000   Min.   : 71.1   Min.   : 52.0  
-##  1st Qu.:15.43   1st Qu.:4.000   1st Qu.:120.8   1st Qu.: 96.5  
-##  Median :19.20   Median :6.000   Median :196.3   Median :123.0  
-##  Mean   :20.09   Mean   :6.188   Mean   :230.7   Mean   :146.7  
-##  3rd Qu.:22.80   3rd Qu.:8.000   3rd Qu.:326.0   3rd Qu.:180.0  
-##  Max.   :33.90   Max.   :8.000   Max.   :472.0   Max.   :335.0  
-##       drat             wt             qsec             vs        
-##  Min.   :2.760   Min.   :1.513   Min.   :14.50   Min.   :0.0000  
-##  1st Qu.:3.080   1st Qu.:2.581   1st Qu.:16.89   1st Qu.:0.0000  
-##  Median :3.695   Median :3.325   Median :17.71   Median :0.0000  
-##  Mean   :3.597   Mean   :3.217   Mean   :17.85   Mean   :0.4375  
-##  3rd Qu.:3.920   3rd Qu.:3.610   3rd Qu.:18.90   3rd Qu.:1.0000  
-##  Max.   :4.930   Max.   :5.424   Max.   :22.90   Max.   :1.0000  
-##        am              gear            carb      
-##  Min.   :0.0000   Min.   :3.000   Min.   :1.000  
-##  1st Qu.:0.0000   1st Qu.:3.000   1st Qu.:2.000  
-##  Median :0.0000   Median :4.000   Median :2.000  
-##  Mean   :0.4062   Mean   :3.688   Mean   :2.812  
-##  3rd Qu.:1.0000   3rd Qu.:4.000   3rd Qu.:4.000  
-##  Max.   :1.0000   Max.   :5.000   Max.   :8.000
-```
+![](slides_files/figure-html/unnamed-chunk-3-1.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-2.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-3.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-4.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-5.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-6.svg)&lt;!-- --&gt;![](slides_files/figure-html/unnamed-chunk-3-7.svg)&lt;!-- --&gt;
 
 ---
 class: inverse, middle, center
@@ -518,7 +497,7 @@ class: inverse, middle, center
 
 
 ``` r
-summary(mtcars)  # for a slide we should never get to
+summary(mtcars)  # filler for a slide we should never get to
 ```
 
 ```
