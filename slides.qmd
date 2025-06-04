@@ -1,7 +1,9 @@
 ---
 title: "Sparse Regression Models"
+subtitle: "Lecture 6 - MATH11301"
 format:
   revealjs:
+    lib_dir: libs
     smaller: true
     theme: [default] #, edtheme.scss]
 ---
@@ -21,7 +23,6 @@ library(openintro)   # credit dataset from IDS
 library(broom)       # keep it tidy()
 library(glmnet)      # Ridge & Lasso implementations
 library(Matrix)      # glmnet dependency, input type
-library(gridExtra)   # easy image grids 
 ```
 
 1. Regression Recap
@@ -370,13 +371,17 @@ Could instead use a combined penalty term, $P(\alpha,\beta) = \frac{1}{2}(1-\alp
 #| fig-format: svg
 #| layout-ncol: 3
 #| layout-nrow: 2
-plot.R <- plot(glmnet(X, y, alpha=0), xvar="lambda", main="Elastic (a = 0)\n")
-plot.2 <- plot(glmnet(X, y, alpha=1e-3), xvar="lambda", main="Elastic (a = 0.001)\n")
-plot.4 <- plot(glmnet(X, y, alpha=1e-2), xvar="lambda", main="Elastic (a = 0.01)\n")
-plot.6 <- plot(glmnet(X, y, alpha=1e-1), xvar="lambda", main="Elastic (a = 0.1)\n")
-plot.8 <- plot(glmnet(X, y, alpha=5e-1), xvar="lambda", main="Elastic (a = 0.5)\n")
-plot.L <- plot(glmnet(X, y, alpha=1e-0), xvar="lambda", main="Elastic (a = 1)\n")
-grid.arrange(plot.R, plot.2, plot.4, plot.6, plot.8, plot.L, ncol=3)
+#| fig-cap:
+#|   - "alpha = 0"
+#|   - "alpha = 0.001"
+#|   - "alpha = 0.01"
+#|   - "alpha = 0.1"
+#|   - "alpha = 0.5"
+#|   - "alpha = 1"
+#| fig-cap-location: top  # BUG doesn't seem to work
+for (a in c(0, 1e-3, 1e-2, 1e-1, 5e-1, 1)) {
+  plot(glmnet(X, y, alpha=a), xvar="lambda")
+}
 ```
 
 # 4. Dimension Reduction
