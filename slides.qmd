@@ -15,6 +15,7 @@ format:
 #| echo: false
 #| warning: false
 #| message: false
+#| cache: true
 options(htmltools.dir.version = FALSE)
 library(tidyverse)   # kitchen sink
 library(kableExtra)  # table formatting
@@ -24,6 +25,15 @@ library(broom)       # keep it tidy()
 library(glmnet)      # Ridge & Lasso implementations
 library(Matrix)      # glmnet dependency, input type
 ```
+
+```{css}
+/*| echo: false */
+figcaption {
+  margin: auto;
+  text-align: center;
+}
+```
+
 
 1. Regression Recap
 2. Subset Selection
@@ -35,6 +45,7 @@ library(Matrix)      # glmnet dependency, input type
 #| fig-align: "right"
 #| fig-alt: "Two square panels show identical sets of scattered black dots, with only the red additions being different. The left panel shows a slightly rising red line drawn through the middle of the panel, passing near a few dots but not obviously related to most of them. A red text is below the dots: R-squared = 0.06. The right panel shows many of the dots connected by red lines to form a stick figure of a man resembling the constellation Orion, with the hand on the reader's right raised and holding an object. A red text is below the dots: Rexthor, the Dog-Bearer. A caption is below and spanning both panels: I don't trust linear regressions when it's harder to guess the direction of the correlation from the scatter plot than to find new constellations on it."
 #| out-width: "50%"
+#| cache: true
 knitr::include_graphics("https://imgs.xkcd.com/comics/linear_regression.png")
 ```
 
@@ -51,6 +62,7 @@ Given response $y$ and **single** predictor $x$, this model fits to $y = \beta_{
 #| fig-align: 'center'
 #| fig-format: svg
 #| fig-alt: "Scatter diagram for the classic 'mtcars' dataset, showing miles per gallon against horsepower. A linear regression of y = 30 - 0.068x is shown."
+#| cache: true
 scatter_example <- ggplot(mtcars, aes(x = hp, y = mpg)) +
   theme_minimal() +
   labs(
@@ -109,6 +121,7 @@ In <abbr title="Introduction to Data Science, one of the first year maths course
 ```{r}
 #| label: ids-data-prep
 #| echo: false
+#| cache: true
 # IDS uses 'Introduction to Modern Statistics' textbook. It doesn't actually
 # work with the full, raw Lending Club data; using the code below it first
 # consolidates some variables, fixes some types, and then selects a subset.
@@ -137,6 +150,7 @@ loans_ids <- loans_full_schema |>
 ```{r}
 #| label: ims-analyse
 #| echo: false
+#| cache: true
 # This code for MLR is also from Intro to Modern Stats, just with a few
 # minor formatting corrections.
 
@@ -186,6 +200,7 @@ Starting with full model, successively remove predictors until the criterion can
 ```{r}
 #| label: step-backwards
 #| echo: true
+#| cache: true
 full_model <- lm(interest_rate~., data=loans_ids)
 backward <- step(full_model, direction='backward')
 ```
@@ -197,6 +212,7 @@ Starting with the empty model, successively add predictors until criterion can't
 ```{r}
 #| label: step-forwards
 #| echo: true
+#| cache: true
 empty_model <- lm(interest_rate~1, data=na.omit(loans_ids))
 forward <- step(empty_model, direction='forward', scope = formula(full_model))
 ```
@@ -215,13 +231,16 @@ In practice, we often take combined approach: starting from the empty model, whe
 #| label: step-both
 #| echo: true
 #| eval: false
+#| cache: true
 empty_model <- lm(interest_rate~1, data=na.omit(loans_ids))
 both <- step(empty_model, direction='both', scope = formula(full_model))
 ```
 
 The aim is to mimic the 'benefits' of an exhaustive search while retaining subset selection's efficiency.
+
 . . .
- Importantly though, **they do not guarantee optimality!**
+
+Importantly though, **they do not guarantee optimality!**
 
 . . .
 
@@ -252,8 +271,9 @@ Working from the least squares problem, $\min_{{\bf\beta}}(\operatorname{RSS})$,
   \min_{\beta} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 + \lambda\|\beta\| \right),
 \end{equation}
 
-::: aside
-**Note**: we can show the above is the **Lagrange form** of constraining ;east squares by some ${\|\beta\|} \leq t$.
+::: {style="color: gray; font-size: smaller;"}
+<br><br>
+**Note**: we can show the above is the **Lagrange form** of constraining least squares by some ${\|\beta\|} \leq t$.
 :::
 
 ## The Ridge
@@ -263,6 +283,7 @@ In **Ridge regression**, we apply the $\mathcal{l}_2$ norm, solving $\min_{\beta
 ```{r}
 #| label: load-data-nona
 #| echo: false
+#| cache: true
 loans_ids <- na.omit(loans_ids)
 ```
 
@@ -270,6 +291,7 @@ loans_ids <- na.omit(loans_ids)
 #| label: ridge-regression
 #| warning: false
 #| message: false
+#| cache: true
 # glmnet requires matrix input, not formula
 X <- as.matrix(loans_ids[, -1])  # first column is interest_rate
 y <- as.matrix(loans_ids[, 1])
@@ -283,6 +305,7 @@ model = glmnet(X, y, alpha = 0)  # use L2 norm
 #| fig-height: 4
 #| fig.width: 6
 #| fig-format: svg
+#| cache: true
 plot(model, label = TRUE, xvar = "lambda")
 ```
 
@@ -296,6 +319,7 @@ With **Lasso regression** we apply the $\mathcal{l}_1$ norm, solving $\min_{\bet
 #| label: lasso-regression
 #| warning: false
 #| message: false
+#| cache: true
 # glmnet requires matrix input, not formula
 X <- as.matrix(loans_ids[, -1])  # first column is interest_rate
 y <- as.matrix(loans_ids[, 1])
@@ -309,6 +333,7 @@ model = glmnet(X, y, alpha = 1)  # use L1 norm
 #| fig-height: 4
 #| fig-width: 6
 #| fig-format: svg
+#| cache: true
 plot(model, label = TRUE, xvar = "lambda")
 ```
 
@@ -325,12 +350,10 @@ $$
 
 ```{r}
 #| label: figure-6.7
-#| echo: false
-#| out-width: "80%"
-#| fig-show: "hold"
-#| fig-align: "center"
-#| fig-alt: "Hello, world!"
+#| fig-format: jpeg
+#| fig-alt: "Two side-by-side 2D plots of quadratic contours from the least squares objective. In the first plot, the contours first touch the feasible region from the L1 constraint at a vertex. In the second point, the contours first touche the feasible region from the L2 constraint at an arbitary point."
 #| fig-cap: "Contour plot of the error and constraint functions for the lasso and ridge respectively."
+#| cache: true
 knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/5/58/Regularization.jpg")
 ```
 
@@ -341,6 +364,7 @@ Unlike Ridge, Lasso performs variable selection. This creates **sparse models**.
 ```{r}
 #| label: tall-data-simulation
 #| results: 'hide'
+#| cache: true
 n <- 100
 X <- matrix(rnorm(n*20), n, 20)  # n-by-20 matrix of rnorms
 y <- rnorm(n)
@@ -353,10 +377,12 @@ lasso_model <- glmnet(X, y, alpha=1)  # L1 norm
 #| echo: false
 #| fig-format: svg
 #| layout-ncol: 2
+#| fig-width: 5
 #| fig-cap:
-#|   - "Ridge Coefficients"
-#|   - "Lasso Coefficients"
+#|   - "Coefficients for Ridge Regression"
+#|   - "Coefficients for Lasso Regression"
 #| fig-cap-location: top  # BUG doesn't seem to work
+#| cache: true
 plot(ridge_model, xvar="lambda")
 plot(lasso_model, xvar="lambda")
 ```
@@ -368,19 +394,15 @@ Could instead use a combined penalty term, $P(\alpha,\beta) = \frac{1}{2}(1-\alp
 ```{r}
 #| label: elastic-net
 #| echo: false
-#| fig-format: svg
 #| layout-ncol: 3
 #| layout-nrow: 2
-#| fig-cap:
-#|   - "alpha = 0"
-#|   - "alpha = 0.001"
-#|   - "alpha = 0.01"
-#|   - "alpha = 0.1"
-#|   - "alpha = 0.5"
-#|   - "alpha = 1"
-#| fig-cap-location: top  # BUG doesn't seem to work
+#| fig-width: 3
+#| fig-format: svg
+#| fig-asp: 0.9
+#| fig-alt: "Coefficients for elastic net plotted for alpha = 0, 0.001, 0.01, 0.1, 0.5, and 1."
+#| cache: true
 for (a in c(0, 1e-3, 1e-2, 1e-1, 5e-1, 1)) {
-  plot(glmnet(X, y, alpha=a), xvar="lambda")
+  plot(glmnet(X, y, alpha=a), xvar="lambda", main=paste0("alpha = ", a, "\n\n"))
 }
 ```
 
@@ -392,6 +414,7 @@ for (a in c(0, 1e-3, 1e-2, 1e-1, 5e-1, 1)) {
 
 ```{r}
 #| label: dimension-reduction-placeholder
+#| cache: true
 summary(mtcars)  # filler for a slide we should never get to
 ```
 
