@@ -1,11 +1,17 @@
 ---
-title: "Sparse Regression Models"
+title: "Sparse Regression Modelling"
 subtitle: "Lecture 6 - MATH11301"
 format:
   revealjs:
     lib_dir: libs
     smaller: true
-    theme: [default] #, edtheme.scss]
+    theme: [default, edtheme.scss]
+slide-number: true
+progress: false
+title-slide-attributes:
+    data-background-color: "#041E42"
+    data-color: "#d6d6d6"
+logo: "https://clipground.com/images/university-of-edinburgh-logo-3.png"
 ---
 
 ## Outline
@@ -49,7 +55,7 @@ figcaption {
 knitr::include_graphics("https://imgs.xkcd.com/comics/linear_regression.png")
 ```
 
-# 1. Regression Recap
+# 1. Regression Recap {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
 
 ## Simple Linear Regression
 
@@ -107,8 +113,7 @@ again, fit using least squares procedure:
   \min_{\beta_0, \beta_1, \ldots, \beta_p} \left(\sum_{i=1}^n {\left( y^{(i)} - \beta_0 - \sum_{j=1}^p\beta_{j}x_{j}^{(i)} \right)}^2 \right) =: \min_{{\bf\beta}}(\operatorname{RSS}).
 \end{equation}
 
-## What are the practical issues here?
-<!-- class: inverse, middle, center -->
+## What are the practical issues here? {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
 
 $$
  y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \cdots + \beta_px_p
@@ -168,14 +173,13 @@ model_ids |>
   column_spec(2:5, width="5em")
 ```
 
-# 2. Subset Selection
-<!-- class: inverse, middle, center -->
+# 2. Subset Selection {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
 
 ## Model Selection
 
 We have a model that works with all the predictors, but could we do better?
 
-> _"Of two competing theories, the simpler explanation is to be preferred."_ (Ockham's Razor)
+> _"Of two competing theories, the simpler explanation is to be preferred."_ <br> (Ockham's Razor)
 
 . . .
 
@@ -246,8 +250,7 @@ Importantly though, **they do not guarantee optimality!**
 
 Both work well if $p \ll d$, but **neither is performant when we expect the model to use even a moderate number of variables.**
 
-# 3. Shrinkage Methods
-<!-- class: inverse, middle, center -->
+# 3. Shrinkage Methods {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
 
 ## Penalty Terms
 
@@ -339,14 +342,13 @@ plot(model, label = TRUE, xvar = "lambda")
 
 Note that $\beta_i=0$ for some $i$ and $\lambda$ here.
 
-## What's the key difference here?
-<!-- class: inverse, middle, center -->
+## What's the key difference here? {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
 
 $$
   l_1~\text{vs.}~l_2
 $$
 
-## Constraint Comparison
+## Constraint Comparison {.nostretch}
 
 ```{r}
 #| label: figure-6.7
@@ -354,6 +356,7 @@ $$
 #| fig-alt: "Two side-by-side 2D plots of quadratic contours from the least squares objective. In the first plot, the contours first touch the feasible region from the L1 constraint at a vertex. In the second point, the contours first touche the feasible region from the L2 constraint at an arbitary point."
 #| fig-cap: "Contour plot of the error and constraint functions for the lasso and ridge respectively."
 #| cache: true
+#| out.width: 80%
 knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/5/58/Regularization.jpg")
 ```
 
@@ -406,8 +409,7 @@ for (a in c(0, 1e-3, 1e-2, 1e-1, 5e-1, 1)) {
 }
 ```
 
-# 4. Dimension Reduction
-<!-- class: inverse, middle, center -->
+# 4. Dimension Reduction {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
 
 
 ## Placeholder
@@ -418,5 +420,4 @@ for (a in c(0, 1e-3, 1e-2, 1e-1, 5e-1, 1)) {
 summary(mtcars)  # filler for a slide we should never get to
 ```
 
-# End
-<!-- class: inverse, middle, center -->
+# End {.center background-color="#041E42" style="color: #d6d6d6; text-align: center;" }
